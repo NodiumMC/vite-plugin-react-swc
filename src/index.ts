@@ -29,11 +29,6 @@ type Options = {
    */
   jsxImportSource?: string;
   /**
-   * Enable TypeScript decorators. Requires experimentalDecorators in tsconfig.
-   * @default false
-   */
-  tsDecorators?: boolean;
-  /**
    * Use SWC plugins. Enable SWC at build time.
    * @default undefined
    */
@@ -43,7 +38,6 @@ type Options = {
 const react = (_options?: Options): PluginOption[] => {
   const options = {
     jsxImportSource: _options?.jsxImportSource ?? "react",
-    tsDecorators: _options?.tsDecorators,
     plugins: _options?.plugins
       ? _options?.plugins.map((el): typeof el => [resolve(el[0]), el[1]])
       : undefined,
@@ -153,11 +147,10 @@ const transformWithOptions = async (
 ) => {
   if (id.includes("node_modules")) return;
 
-  const decorators = options?.tsDecorators ?? false;
   const parser: ParserConfig | undefined = id.endsWith(".tsx")
-    ? { syntax: "typescript", tsx: true, decorators }
+    ? { syntax: "typescript", tsx: true }
     : id.endsWith(".ts")
-    ? { syntax: "typescript", tsx: false, decorators }
+    ? { syntax: "typescript", tsx: false }
     : id.endsWith(".jsx")
     ? { syntax: "ecmascript", jsx: true }
     : id.endsWith(".mdx")
@@ -175,11 +168,21 @@ const transformWithOptions = async (
       sourceMaps: true,
       jsc: {
         target: "es2020",
-        parser,
+        parser: {
+          ...parser,
+          decorators: true,
+          // @ts-ignore
+          decoratorsBeforeExport: true,
+          functionBind: true,
+          dynamicImport: true,
+          importAssertions: true,
+          exportDefaultFrom: true,
+        },
         experimental: { plugins: options.plugins },
         transform: {
           useDefineForClassFields: true,
           react: reactConfig,
+          decoratorMetadata: true,
         },
       },
     });
